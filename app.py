@@ -5,7 +5,7 @@ root_path = "data"
 edf_files = []
 
 for root, dirs, files in os.walk(root_path):
-    for file in "data":
+    for file in files:
         if file.endswith(".edf"):
             edf_files.append(os.path.join(root, file))
 
