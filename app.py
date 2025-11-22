@@ -53,7 +53,7 @@ import os
 st.title('EEG Psychological Analyzer')
 
 # EEG dosya listesi
-root_path = "/content/drive/MyDrive/replicate/EEG"
+root_path = "data"
 edf_files = []
 for root, dirs, files in os.walk(root_path):
     for file in files:
