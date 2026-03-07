@@ -16,10 +16,17 @@ if 'current_user' not in st.session_state:
     st.session_state['current_user'] = None
 
 # ----------------------------
-# Sidebar: Login/Register + Logout
+# Sidebar: Logout ve Login/Register
 # ----------------------------
 st.sidebar.title("User Login / Register")
 
+# Logout her zaman görünür
+if st.session_state['current_user']:
+    if st.sidebar.button("Logout"):
+        st.session_state['current_user'] = None
+        st.sidebar.success("Logged out successfully!")
+
+# Eğer giriş yapılmamışsa login formu
 if st.session_state['current_user'] is None:
     with st.sidebar.form("login_form"):
         username = st.text_input("Username")
@@ -41,10 +48,6 @@ if st.session_state['current_user'] is None:
                 st.sidebar.success(f"User {username} registered!")
             else:
                 st.sidebar.warning("Invalid username or already exists")
-else:
-    if st.sidebar.button("Logout"):
-        st.session_state['current_user'] = None
-        st.experimental_rerun()
 
 # ----------------------------
 # 1️⃣ EEG Dosya Yükleme
