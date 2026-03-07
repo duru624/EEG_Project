@@ -72,36 +72,37 @@ if st.button("Run EEG Analysis"):
         """, unsafe_allow_html=True)
 
         # ----------------------------
-        ## ----------------------------
-# 6️⃣ Guided Breathing (Yeni)
-# ----------------------------
-st.subheader("Guided Breathing Exercise")
+        # 6️⃣ Breathing / Guided Regulation
+        # ----------------------------
+        st.subheader("Guided Breathing Exercise")
+        st.write("Inhale for 4 seconds → Hold 4 seconds → Exhale 4 seconds")
+        if st.button("Start Breathing Exercise"):
+            for i in range(4):
+                st.write(f"Inhale... {4-i}")
+                st.sleep(1)
+            for i in range(4):
+                st.write(f"Hold... {4-i}")
+                st.sleep(1)
+            for i in range(4):
+                st.write(f"Exhale... {4-i}")
+                st.sleep(1)
+            st.success("Breathing cycle completed!")
 
-def breathing_exercise():
-    placeholder = st.empty()  # Animasyon için
-    phases = [("Inhale",4), ("Hold",4), ("Exhale",4)]
-    for phase, seconds in phases:
-        for i in range(seconds,0,-1):
-            placeholder.markdown(f"<h2 style='color:#4CAF50'>{phase}... {i}</h2>", unsafe_allow_html=True)
-            st.sleep(1)
-    placeholder.markdown("<h2 style='color:#2196F3'>Breathing cycle completed! 🌬️</h2>", unsafe_allow_html=True)
+        # ----------------------------
+        # 7️⃣ Personalized Emotional Tracker
+        # ----------------------------
+        st.session_state['history'].append(prediction)
+        if len(st.session_state['history']) > 10:  # son 10 testi sakla
+            st.session_state['history'].pop(0)
 
-if st.button("Start Breathing Exercise"):
-    breathing_exercise()
-
-# ----------------------------
-# 7️⃣ Personalized Emotional Tracker (Tablo)
-# ----------------------------
-st.subheader("Personalized EEG History")
-
-from datetime import datetime
-# Yeni entry ekle
-st.session_state['history'].append({
-    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    "prediction": prediction,
-    "advice": recommendations[prediction]
-})
-
-# Son 10 testi göster
-history_table = st.session_state['history'][-10:]
-st.table(history_table)
+        st.subheader("Last EEG Predictions Trend")
+        fig, ax = plt.subplots()
+        x = list(range(1,len(st.session_state['history'])+1))
+        y = [ {'stressed':2,'tired':1,'normal':0}[p] for p in st.session_state['history'] ]
+        ax.plot(x,y, marker='o')
+        ax.set_yticks([0,1,2])
+        ax.set_yticklabels(['normal','tired','stressed'])
+        ax.set_xlabel("Test #")
+        ax.set_ylabel("Mental State")
+        ax.set_title("Personalized EEG Trend")
+        st.pyplot(fig)
