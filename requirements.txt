@@ -6,3 +6,4 @@ mne
 matplotlib
 opencv-python-headless
 mediapipe
+pillow
