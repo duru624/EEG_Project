@@ -148,3 +148,92 @@ if st.session_state['current_user'] is not None:
 
 else:
     st.info("Please login or register to run the EEG Analyzer.")
+st.markdown("---")
+st.header("Try With Camera")
+
+if st.button("Try Mental State Detection With Camera"):
+
+    st.info("Camera activated. Please look at the screen.")
+
+    import cv2
+    import mediapipe as mp
+    import numpy as np
+
+    mp_face = mp.solutions.face_mesh
+    face_mesh = mp_face.FaceMesh()
+
+    cap = cv2.VideoCapture(0)
+
+    FRAME_WINDOW = st.image([])
+
+    frames = 0
+    eye_ratios = []
+    mouth_ratios = []
+
+    while frames < 50:
+
+        ret, frame = cap.read()
+        if not ret:
+            st.error("Camera not accessible")
+            break
+
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = face_mesh.process(frame_rgb)
+
+        if results.multi_face_landmarks:
+
+            for face_landmarks in results.multi_face_landmarks:
+
+                landmarks = face_landmarks.landmark
+
+                # Eye openness (approx)
+                eye_top = landmarks[159].y
+                eye_bottom = landmarks[145].y
+                eye_ratio = abs(eye_top - eye_bottom)
+
+                # Mouth openness
+                mouth_top = landmarks[13].y
+                mouth_bottom = landmarks[14].y
+                mouth_ratio = abs(mouth_top - mouth_bottom)
+
+                eye_ratios.append(eye_ratio)
+                mouth_ratios.append(mouth_ratio)
+
+        FRAME_WINDOW.image(frame_rgb)
+        frames += 1
+
+    cap.release()
+
+    avg_eye = np.mean(eye_ratios)
+    avg_mouth = np.mean(mouth_ratios)
+
+    st.write("Eye openness score:", round(avg_eye,3))
+    st.write("Mouth tension score:", round(avg_mouth,3))
+
+    # Simple rule-based prediction
+    if avg_eye < 0.015:
+        prediction = "tired"
+    elif avg_mouth > 0.03:
+        prediction = "stressed"
+    else:
+        prediction = "normal"
+
+    st.subheader("Mental State Prediction")
+
+    colors = {
+        "stressed":"#FF4C4C",
+        "tired":"#FFD700",
+        "normal":"#4CAF50"
+    }
+
+    st.markdown(f"""
+    <div style="background-color:{colors[prediction]};
+                color:white;
+                padding:40px;
+                border-radius:15px;
+                text-align:center;
+                font-size:40px;
+                font-weight:bold;">
+        {prediction.upper()}
+    </div>
+    """, unsafe_allow_html=True)
