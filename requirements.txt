@@ -4,4 +4,5 @@ pandas
 scikit-learn
 mne
 matplotlib
-
+opencv-python-headless
+mediapipe
