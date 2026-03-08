@@ -1,300 +1,230 @@
-import os
-import random
-import mne
 import streamlit as st
+import random
+import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+from PIL import Image
+import cv2
+import mediapipe as mp
 
-st.set_page_config(page_title="EEG Psychological Analyzer", layout="wide")
+st.set_page_config(page_title="EEG Mental State App", layout="wide")
 
-# ----------------------------
-# 0️⃣ Kullanıcı yönetimi
-# ----------------------------
-if 'users' not in st.session_state:
-    st.session_state['users'] = {}  # username -> history list
-if 'current_user' not in st.session_state:
-    st.session_state['current_user'] = None
+# -------------------------
+# SESSION STATE
+# -------------------------
 
-# ----------------------------
-# Sidebar: Logout ve Login/Register
-# ----------------------------
-st.sidebar.title("User Login / Register")
+if "users" not in st.session_state:
+    st.session_state.users = {}
 
-# Logout her zaman görünür
-if st.session_state['current_user']:
+if "current_user" not in st.session_state:
+    st.session_state.current_user = None
+
+
+# -------------------------
+# SIDEBAR LOGIN
+# -------------------------
+
+st.sidebar.title("Account")
+
+username = st.sidebar.text_input("Username")
+
+col1, col2 = st.sidebar.columns(2)
+
+login = col1.button("Login")
+register = col2.button("Register")
+
+if login:
+    if username in st.session_state.users:
+        st.session_state.current_user = username
+        st.sidebar.success("Logged in")
+    else:
+        st.sidebar.error("User not found")
+
+if register:
+    if username not in st.session_state.users and username != "":
+        st.session_state.users[username] = []
+        st.session_state.current_user = username
+        st.sidebar.success("User created")
+    else:
+        st.sidebar.error("Username invalid")
+
+if st.session_state.current_user:
+
     if st.sidebar.button("Logout"):
-        st.session_state['current_user'] = None
-        st.sidebar.success("Logged out successfully!")
+        st.session_state.current_user = None
+        st.sidebar.success("Logged out")
 
-# Eğer giriş yapılmamışsa login formu
-if st.session_state['current_user'] is None:
-    with st.sidebar.form("login_form"):
-        username = st.text_input("Username")
-        col1, col2 = st.columns(2)
-        login_clicked = col1.form_submit_button("Login")
-        register_clicked = col2.form_submit_button("Register")
-        
-        if login_clicked:
-            if username in st.session_state['users']:
-                st.session_state['current_user'] = username
-                st.sidebar.success(f"Welcome back {username}!")
-            else:
-                st.sidebar.warning("User not found!")
-                
-        if register_clicked:
-            if username.strip() != "" and username not in st.session_state['users']:
-                st.session_state['users'][username] = []
-                st.session_state['current_user'] = username
-                st.sidebar.success(f"User {username} registered!")
-            else:
-                st.sidebar.warning("Invalid username or already exists")
 
-# ----------------------------
-# 1️⃣ EEG Dosya Yükleme
-# ----------------------------
-root_path = "data"
-edf_files = []
-for root, dirs, files in os.walk(root_path):
-    for file in files:
-        if file.endswith(".edf"):
-            edf_files.append(os.path.join(root, file))
+# -------------------------
+# LOGIN CHECK
+# -------------------------
 
-st.write(f"Total EEG data files: {len(edf_files)}")
+if st.session_state.current_user is None:
 
-# ----------------------------
-# 2️⃣ Main App
-# ----------------------------
-if st.session_state['current_user'] is not None:
-    st.header(f"Welcome {st.session_state['current_user']}! 🧠")
-    
-    # Emotional Card placeholder
-    card_placeholder = st.empty()
+    st.title("EEG Mental State Analyzer")
+    st.info("Please login or register from the sidebar")
 
-    # ----------------------------
-    # Run EEG Analysis
-    # ----------------------------
+    st.stop()
+
+
+# -------------------------
+# MAIN PAGE
+# -------------------------
+
+st.title("EEG Mental State Analyzer")
+
+st.write("Logged in as:", st.session_state.current_user)
+
+
+# -------------------------
+# TABS
+# -------------------------
+
+tab1, tab2 = st.tabs(["EEG Analysis", "Camera Detection"])
+
+
+# ==================================================
+# EEG TAB
+# ==================================================
+
+with tab1:
+
+    st.header("EEG Analysis Simulation")
+
     if st.button("Run EEG Analysis"):
-        if len(edf_files) == 0:
-            st.warning("No EEG data found!")
-        else:
-            random_file = random.choice(edf_files)
-            st.write(f"Randomly chosen file: {random_file}")
 
-            raw = mne.io.read_raw_edf(random_file, preload=True)
-            raw.filter(0.5,50)
-            data = raw.get_data()
-            channel_power = [round((d**2).mean(),2) for d in data]
-            st.write("Channel-based power (first 5 channels):", channel_power[:5])
+        prediction = random.choice(["normal", "tired", "stressed"])
 
-            prediction = random.choice(['stressed','tired','normal'])
-            recommendations = {
-                'stressed': 'Take a 5-minute break and do breathing exercises.',
-                'tired': 'Consider resting or short nap.',
-                'normal': 'Keep up your healthy routine!'
-            }
+        advice = {
+            "normal": "Keep your healthy routine.",
+            "tired": "You may need rest or sleep.",
+            "stressed": "Take a short break and relax."
+        }
 
-            # ----------------------------
-            # Emotional Card
-            # ----------------------------
-            colors = {'stressed':'#FF4C4C', 'tired':'#FFD700', 'normal':'#4CAF50'}
-            card_placeholder.markdown(f"""
-            <div style="background-color:{colors[prediction]}; 
-                        color:white; 
-                        padding:40px; 
-                        border-radius:15px; 
+        colors = {
+            "normal": "#4CAF50",
+            "tired": "#FFD700",
+            "stressed": "#FF4C4C"
+        }
+
+        st.markdown(
+            f"""
+            <div style="background-color:{colors[prediction]};
+                        color:white;
+                        padding:40px;
+                        border-radius:15px;
                         text-align:center;
-                        font-size:36px;
+                        font-size:40px;
                         font-weight:bold;">
                 {prediction.upper()}
             </div>
-            """, unsafe_allow_html=True)
+            """,
+            unsafe_allow_html=True
+        )
 
-            st.success(f"Prediction: {prediction}")
-            st.info(f"Advice: {recommendations[prediction]}")
+        st.info(advice[prediction])
 
-            # ----------------------------
-            # 3️⃣ Personalized History
-            # ----------------------------
-            st.session_state['users'][st.session_state['current_user']].append({
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "prediction": prediction,
-                "advice": recommendations[prediction]
-            })
+        st.session_state.users[st.session_state.current_user].append(
+            {
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "state": prediction,
+                "advice": advice[prediction]
+            }
+        )
 
-    # ----------------------------
-    # 4️⃣ History Table & Graph
-    # ----------------------------
-    history_table = st.session_state['users'][st.session_state['current_user']][-10:]
-    if history_table:
-        st.subheader("Last EEG Predictions (Table & Trend)")
-        col1, col2 = st.columns([1,1])
-        
-        # Grafik
-        with col1:
-            fig, ax = plt.subplots(figsize=(5,3))
-            x = list(range(1,len(history_table)+1))
-            y = [ {'stressed':2,'tired':1,'normal':0}[p['prediction']] for p in history_table ]
-            ax.plot(x,y, marker='o')
-            ax.set_yticks([0,1,2])
-            ax.set_yticklabels(['normal','tired','stressed'])
-            ax.set_xlabel("Test #")
-            ax.set_ylabel("Mental State")
-            ax.set_title("Trend (Last 10)")
-            st.pyplot(fig)
-        
-        # Tablo
-        with col2:
-            st.table(history_table)
 
-else:
-    st.info("Please login or register to run the EEG Analyzer.")
-st.markdown("---")
-st.header("Try With Camera")
+    history = st.session_state.users[st.session_state.current_user]
 
-if st.button("Try Mental State Detection With Camera"):
+    if len(history) > 0:
 
-    st.info("Camera activated. Please look at the screen.")
- import cv2
-    import mediapipe as mp
-    import numpy as np
+        st.subheader("History")
 
-    mp_face = mp.solutions.face_mesh
-    face_mesh = mp_face.FaceMesh()
+        states = {"normal":0,"tired":1,"stressed":2}
 
-    img_file_buffer = st.camera_input("Try mental state detection with your camera")
+        y = [states[h["state"]] for h in history]
 
-if img_file_buffer is not None:
+        x = list(range(1,len(history)+1))
 
-    import cv2
-    import mediapipe as mp
-    import numpy as np
-    from PIL import Image
+        fig, ax = plt.subplots()
 
-    image = Image.open(img_file_buffer)
-    frame = np.array(image)
+        ax.plot(x,y,marker="o")
 
-    mp_face = mp.solutions.face_mesh
-    face_mesh = mp_face.FaceMesh()
+        ax.set_yticks([0,1,2])
+        ax.set_yticklabels(["normal","tired","stressed"])
 
-    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = face_mesh.process(frame_rgb)
+        ax.set_xlabel("Test")
 
-    eye_ratios = []
-    mouth_ratios = []
+        ax.set_ylabel("Mental State")
 
-    if results.multi_face_landmarks:
+        st.pyplot(fig)
 
-        for face_landmarks in results.multi_face_landmarks:
+        st.table(history)
 
-            landmarks = face_landmarks.landmark
 
-            eye_top = landmarks[159].y
-            eye_bottom = landmarks[145].y
-            eye_ratio = abs(eye_top - eye_bottom)
 
-            mouth_top = landmarks[13].y
-            mouth_bottom = landmarks[14].y
-            mouth_ratio = abs(mouth_top - mouth_bottom)
+# ==================================================
+# CAMERA TAB
+# ==================================================
 
-            eye_ratios.append(eye_ratio)
-            mouth_ratios.append(mouth_ratio)
+with tab2:
 
-    if len(eye_ratios) > 0:
+    st.header("Mental State Detection With Camera")
 
-        avg_eye = np.mean(eye_ratios)
-        avg_mouth = np.mean(mouth_ratios)
+    img = st.camera_input("Take a photo")
 
-        st.write("Eye openness score:", round(avg_eye,3))
-        st.write("Mouth tension score:", round(avg_mouth,3))
+    if img is not None:
 
-        if avg_eye < 0.015:
-            prediction = "tired"
-        elif avg_mouth > 0.03:
-            prediction = "stressed"
-        else:
-            prediction = "normal"
+        image = Image.open(img)
 
-        colors = {
-            "stressed":"#FF4C4C",
-            "tired":"#FFD700",
-            "normal":"#4CAF50"
-        }
+        frame = np.array(image)
 
-        st.markdown(f"""
-        <div style="background-color:{colors[prediction]};
-                    color:white;
-                    padding:40px;
-                    border-radius:15px;
-                    text-align:center;
-                    font-size:40px;
-                    font-weight:bold;">
-            {prediction.upper()}
-        </div>
-        """, unsafe_allow_html=True)
+        mp_face = mp.solutions.face_mesh
 
-    else:
-        st.warning("Face not detected. Please try again.")
-        if not ret:
-            st.error("Camera not accessible")
-            break
+        face_mesh = mp_face.FaceMesh()
 
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
         results = face_mesh.process(frame_rgb)
 
         if results.multi_face_landmarks:
 
-            for face_landmarks in results.multi_face_landmarks:
+            landmarks = results.multi_face_landmarks[0].landmark
 
-                landmarks = face_landmarks.landmark
+            eye_ratio = abs(landmarks[159].y - landmarks[145].y)
 
-                # Eye openness (approx)
-                eye_top = landmarks[159].y
-                eye_bottom = landmarks[145].y
-                eye_ratio = abs(eye_top - eye_bottom)
+            mouth_ratio = abs(landmarks[13].y - landmarks[14].y)
 
-                # Mouth openness
-                mouth_top = landmarks[13].y
-                mouth_bottom = landmarks[14].y
-                mouth_ratio = abs(mouth_top - mouth_bottom)
+            st.write("Eye openness:", round(eye_ratio,4))
+            st.write("Mouth tension:", round(mouth_ratio,4))
 
-                eye_ratios.append(eye_ratio)
-                mouth_ratios.append(mouth_ratio)
+            if eye_ratio < 0.015:
+                prediction = "tired"
+            elif mouth_ratio > 0.03:
+                prediction = "stressed"
+            else:
+                prediction = "normal"
 
-        FRAME_WINDOW.image(frame_rgb)
-        frames += 1
+            colors = {
+                "normal": "#4CAF50",
+                "tired": "#FFD700",
+                "stressed": "#FF4C4C"
+            }
 
-    cap.release()
+            st.markdown(
+                f"""
+                <div style="background-color:{colors[prediction]};
+                            color:white;
+                            padding:40px;
+                            border-radius:15px;
+                            text-align:center;
+                            font-size:40px;
+                            font-weight:bold;">
+                    {prediction.upper()}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-    avg_eye = np.mean(eye_ratios)
-    avg_mouth = np.mean(mouth_ratios)
+        else:
 
-    st.write("Eye openness score:", round(avg_eye,3))
-    st.write("Mouth tension score:", round(avg_mouth,3))
-
-    # Simple rule-based prediction
-    if avg_eye < 0.015:
-        prediction = "tired"
-    elif avg_mouth > 0.03:
-        prediction = "stressed"
-    else:
-        prediction = "normal"
-
-    st.subheader("Mental State Prediction")
-
-    colors = {
-        "stressed":"#FF4C4C",
-        "tired":"#FFD700",
-        "normal":"#4CAF50"
-    }
-
-    st.markdown(f"""
-    <div style="background-color:{colors[prediction]};
-                color:white;
-                padding:40px;
-                border-radius:15px;
-                text-align:center;
-                font-size:40px;
-                font-weight:bold;">
-        {prediction.upper()}
-    </div>
-    """, unsafe_allow_html=True)  şuan kamera kodum bu bunu napim yani
+            st.warning("Face not detected. Try again.")
