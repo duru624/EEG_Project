@@ -4,7 +4,6 @@ pandas
 scikit-learn
 mne
 matplotlib
-opencv-python-headless
 mediapipe
 pillow
 protobuf<4
