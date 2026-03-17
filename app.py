@@ -6,7 +6,7 @@ from datetime import datetime
 from PIL import Image
 import mediapipe as mp
 
-st.set_page_config(page_title="EEG Mental State App", layout="wide")
+st.set_page_config(page_title="NeuroPulse", layout="wide")
 
 # -------------------------
 # SESSION STATE
@@ -20,7 +20,7 @@ if "current_user" not in st.session_state:
 
 
 # -------------------------
-# SIDEBAR LOGIN
+# SIDEBAR AUTH
 # -------------------------
 
 st.sidebar.title("Account")
@@ -29,26 +29,22 @@ username = st.sidebar.text_input("Username")
 
 col1, col2 = st.sidebar.columns(2)
 
-login = col1.button("Login")
-register = col2.button("Register")
-
-if login:
+if col1.button("Login"):
     if username in st.session_state.users:
         st.session_state.current_user = username
         st.sidebar.success("Logged in")
     else:
         st.sidebar.error("User not found")
 
-if register:
-    if username not in st.session_state.users and username != "":
+if col2.button("Register"):
+    if username and username not in st.session_state.users:
         st.session_state.users[username] = []
         st.session_state.current_user = username
-        st.sidebar.success("User created")
+        st.sidebar.success("Account created")
     else:
-        st.sidebar.error("Username invalid")
+        st.sidebar.error("Invalid username")
 
 if st.session_state.current_user:
-
     if st.sidebar.button("Logout"):
         st.session_state.current_user = None
         st.sidebar.success("Logged out")
@@ -59,140 +55,116 @@ if st.session_state.current_user:
 # -------------------------
 
 if st.session_state.current_user is None:
+    st.title("🧠 NeuroPulse")
+    st.subheader("Mental State Detection Without Words")
 
-    st.title("EEG Mental State Analyzer")
-    st.info("Please login or register from the sidebar")
+    st.write("""
+    This system explores whether mental states can be inferred 
+    from biological and behavioral signals instead of self-reporting.
+
+    ⚠️ This is NOT a medical tool.
+    """)
 
     st.stop()
 
 
 # -------------------------
-# MAIN PAGE
+# MAIN UI
 # -------------------------
 
-st.title("EEG Mental State Analyzer")
-
+st.title("🧠 NeuroPulse Dashboard")
 st.write("Logged in as:", st.session_state.current_user)
 
-
-# -------------------------
-# TABS
-# -------------------------
-
-tab1, tab2 = st.tabs(["EEG Analysis", "Camera Detection"])
+tab1, tab2 = st.tabs(["🧪 EEG Mode", "📷 Camera Mode"])
 
 
 # ==================================================
-# EEG TAB
+# EEG MODE
 # ==================================================
 
 with tab1:
 
-    st.header("EEG Analysis Simulation")
+    st.header("EEG-Based Mental State Simulation")
 
-    if st.button("Run EEG Analysis"):
+    if st.button("Run Analysis"):
 
         prediction = random.choice(["normal", "tired", "stressed"])
 
         advice = {
-            "normal": "Keep your healthy routine.",
-            "tired": "You may need rest or sleep.",
-            "stressed": "Take a short break and relax."
+            "normal": "Maintain your current routine.",
+            "tired": "Consider rest or sleep.",
+            "stressed": "Take a break and regulate breathing."
         }
 
         colors = {
             "normal": "#4CAF50",
-            "tired": "#FFD700",
-            "stressed": "#FF4C4C"
+            "tired": "#FFC107",
+            "stressed": "#F44336"
         }
 
-        st.markdown(
-            f"""
-            <div style="background-color:{colors[prediction]};
-                        color:white;
-                        padding:40px;
-                        border-radius:15px;
-                        text-align:center;
-                        font-size:40px;
-                        font-weight:bold;">
-                {prediction.upper()}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        st.markdown(f"""
+        <div style="background:{colors[prediction]};
+                    padding:40px;
+                    border-radius:20px;
+                    text-align:center;
+                    color:white;
+                    font-size:36px;
+                    font-weight:bold;">
+            {prediction.upper()}
+        </div>
+        """, unsafe_allow_html=True)
 
         st.info(advice[prediction])
 
-        st.session_state.users[st.session_state.current_user].append(
-            {
-                "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "state": prediction,
-                "advice": advice[prediction]
-            }
-        )
-
+        st.session_state.users[st.session_state.current_user].append({
+            "time": datetime.now().strftime("%H:%M"),
+            "state": prediction
+        })
 
     history = st.session_state.users[st.session_state.current_user]
 
-    if len(history) > 0:
+    if history:
+        st.subheader("Trend")
 
-        st.subheader("History")
-
-        states = {"normal":0,"tired":1,"stressed":2}
-
-        y = [states[h["state"]] for h in history]
-
-        x = list(range(1,len(history)+1))
+        mapping = {"normal": 0, "tired": 1, "stressed": 2}
+        y = [mapping[h["state"]] for h in history]
+        x = list(range(len(history)))
 
         fig, ax = plt.subplots()
-
-        ax.plot(x,y,marker="o")
+        ax.plot(x, y, marker="o")
 
         ax.set_yticks([0,1,2])
         ax.set_yticklabels(["normal","tired","stressed"])
 
-        ax.set_xlabel("Test")
-
-        ax.set_ylabel("Mental State")
-
         st.pyplot(fig)
-
-        st.table(history)
-
 
 
 # ==================================================
-# CAMERA TAB
+# CAMERA MODE
 # ==================================================
 
 with tab2:
 
-    st.header("Mental State Detection With Camera")
+    st.header("Facial-Based Mental State Detection")
 
-    img = st.camera_input("Take a photo")
+    img = st.camera_input("Capture Image")
 
-    if img is not None:
+    if img:
 
         image = Image.open(img)
-
         frame = np.array(image)
 
         mp_face = mp.solutions.face_mesh
-
         face_mesh = mp_face.FaceMesh()
-        frame_rgb = frame
-        results = face_mesh.process(frame_rgb)
+
+        results = face_mesh.process(frame)
 
         if results.multi_face_landmarks:
 
-            landmarks = results.multi_face_landmarks[0].landmark
+            lm = results.multi_face_landmarks[0].landmark
 
-            eye_ratio = abs(landmarks[159].y - landmarks[145].y)
-
-            mouth_ratio = abs(landmarks[13].y - landmarks[14].y)
-
-            st.write("Eye openness:", round(eye_ratio,4))
-            st.write("Mouth tension:", round(mouth_ratio,4))
+            eye_ratio = abs(lm[159].y - lm[145].y)
+            mouth_ratio = abs(lm[13].y - lm[14].y)
 
             if eye_ratio < 0.015:
                 prediction = "tired"
@@ -203,25 +175,24 @@ with tab2:
 
             colors = {
                 "normal": "#4CAF50",
-                "tired": "#FFD700",
-                "stressed": "#FF4C4C"
+                "tired": "#FFC107",
+                "stressed": "#F44336"
             }
 
-            st.markdown(
-                f"""
-                <div style="background-color:{colors[prediction]};
-                            color:white;
-                            padding:40px;
-                            border-radius:15px;
-                            text-align:center;
-                            font-size:40px;
-                            font-weight:bold;">
-                    {prediction.upper()}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.markdown(f"""
+            <div style="background:{colors[prediction]};
+                        padding:40px;
+                        border-radius:20px;
+                        text-align:center;
+                        color:white;
+                        font-size:36px;
+                        font-weight:bold;">
+                {prediction.upper()}
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.write("Eye:", round(eye_ratio,4))
+            st.write("Mouth:", round(mouth_ratio,4))
 
         else:
-
-            st.warning("Face not detected. Try again.")
+            st.warning("Face not detected")
