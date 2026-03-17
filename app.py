@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 from PIL import Image
-import cv2
 import mediapipe as mp
 
 st.set_page_config(page_title="EEG Mental State App", layout="wide")
@@ -181,9 +180,7 @@ with tab2:
         mp_face = mp.solutions.face_mesh
 
         face_mesh = mp_face.FaceMesh()
-
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
+        frame_rgb = frame
         results = face_mesh.process(frame_rgb)
 
         if results.multi_face_landmarks:
