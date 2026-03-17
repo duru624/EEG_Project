@@ -9,6 +9,7 @@ import mediapipe.tasks.python as tasks
 from . import vision
 import mediapipe.tasks.python.vision.drawing_styles
 from mediapipe.tasks.python.vision import drawing_utils
+import cv2
 
 
 st.set_page_config(page_title="NeuroPulse", layout="wide")
