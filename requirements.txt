@@ -7,3 +7,4 @@ matplotlib
 mediapipe
 pillow
 protobuf<4
+opencv-python-headless==4.8.1.78
